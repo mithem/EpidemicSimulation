@@ -1,4 +1,5 @@
 import math
+import numpy
 
 
 def coordinate_distance(a: tuple, b: tuple):
@@ -21,5 +22,6 @@ def get_neighbor_coords(c: tuple, d: int, boundary_length: int):
     return result
 
 
-if __name__ == "__main__":
-    print(get_neighbor_coords((0, 0), 3, 100))
+def moving_average(x, N):
+    cumsum = numpy.cumsum(numpy.insert(x, 0, 0))
+    return (cumsum[N:] - cumsum[:-N]) / float(N)

@@ -1,10 +1,10 @@
 import math
 import random as random_module
-from episimlib.utils import coordinate_distance, get_neighbor_coords
+from episim.utils import coordinate_distance, get_neighbor_coords
 
 
 class Config:
-    def __init__(self, capacity=1000, initial_infections=5, iterations=500, infection_distance=1, infection_chance=0.01):
+    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.iterations = iterations

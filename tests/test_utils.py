@@ -1,4 +1,4 @@
-from episimlib.utils import coordinate_distance, get_neighbor_coords
+from episim.utils import coordinate_distance, get_neighbor_coords
 
 
 def test_coordinate_distance():
