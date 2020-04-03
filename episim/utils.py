@@ -11,12 +11,12 @@ def coordinate_distance(a: tuple, b: tuple):
 def get_neighbor_coords(c: tuple, d: int, boundary_length: int):
     """return list of neighbors coordinates from `c`, max distance `d` away. `boundary_length`specifies how big the coordinate system is. Implies it starts at (0, 0)."""
     result = []
-    for x in range(0-d, d + 1):
+    for x in range(int(round(0-d, 0)), int(math.ceil(d + 1))):
         a_x = c[0] + x  # absolute x coord
-        for y in range(0 - d, d + 1):
+        for y in range(int(round(0 - d, 0)), int(math.ceil(d + 1))):
             a_y = c[1] + y  # absolute y coord
-            if a_x >= 0 and a_x < boundary_length - 1:  # within x boundaries
-                if a_y >= 0 and a_y < boundary_length - 1:  # within y boundaries
+            if a_x >= 0 and a_x <= boundary_length:  # within x boundaries
+                if a_y >= 0 and a_y <= boundary_length:  # within y boundaries
                     if x != 0 or y != 0:  # not the same coordinate
                         result.append((a_x, a_y))
     return result
@@ -24,4 +24,4 @@ def get_neighbor_coords(c: tuple, d: int, boundary_length: int):
 
 def moving_average(x, N):
     cumsum = numpy.cumsum(numpy.insert(x, 0, 0))
-    return (cumsum[N:] - cumsum[:-N]) / float(N)
+    return list((cumsum[N:] - cumsum[:-N]) / float(N))

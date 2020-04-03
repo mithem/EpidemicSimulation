@@ -4,13 +4,19 @@ from episim.utils import coordinate_distance, get_neighbor_coords
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01):
+    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.iterations = iterations
         self.infection_distance = infection_distance
         self.infection_chance = infection_chance
+        self.random_movement = random_movement
         self.coordinate_system_length = math.floor(math.sqrt(self.capacity))
+        self.verbose = verbose
+        self.random_infection = random_infection
+
+    def __str__(self):
+        return f"Capacity: {self.capacity}\nInitial Infections: {self.initial_infections}\nIterations: {self.iterations}\nInfection Distance: {self.infection_distance}\nInfection chance: {self.infection_chance}\nRandom infection (initially): {str(self.random_infection)}"
 
 
 class Person:
@@ -52,15 +58,15 @@ class Person:
 
 
 class World:
-    def __init__(self, config: Config, random=True):
+    def __init__(self, config: Config):
         """if `random`, random persons will be chosen to be infected from the start. Otherwise, they will spawn in the top left corner. `Random`might choose the same coordinates/person multiple times."""
         self.config = config
+        self.iteration = 0
         self.coordinates: dict[tuple, Person] = {}
-        print("System length: " + str(self.config.coordinate_system_length))
         for x in range(self.config.coordinate_system_length):
             for y in range(self.config.coordinate_system_length):
                 self.coordinates[(x, y)] = Person()
-        if random:
+        if config.random_infection:
             infected_coords = []
             for i in range(self.config.initial_infections):
                 x = random_module.randint(
@@ -91,11 +97,17 @@ class World:
     def act(self):
         for coord, person in self.coordinates.items():
             neighbors = get_neighbor_coords(
-                coord, self.config.infection_distance + 1, self.config.coordinate_system_length)
+                coord, self.config.infection_distance + 1, self.config.coordinate_system_length - 1)
             for nc in neighbors:
-                if coordinate_distance(coord, nc) <= self.config.infection_distance and (person.infected or self.coordinates[nc].infected) and random_module.random() < self.config.infection_chance:
+                if (coordinate_distance(coord, nc) <= self.config.infection_distance and (person.infected or self.coordinates[nc].infected) and random_module.random() < self.config.infection_chance) or random_module.random() < self.config.random_movement * 0.0001:
                     person.infected = True
                     self.coordinates[nc].infected = True
+
+    def simplify(self):
+        result = {}
+        for coord, person in self.coordinates.items():
+            result[coord] = person.status
+        return result
 
     def __str__(self):
         s = "{\n"
