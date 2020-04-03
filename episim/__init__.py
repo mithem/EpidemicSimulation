@@ -14,30 +14,39 @@ def main(config: Config = None):
         print(config)
     world = World(config)
     vs = VarSet({"iteration": 0, "infected": config.initial_infections,
-                 "new_infections": 0, "k": 0})
+                 "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0})
     try:
+        if config.verbose:
+            print(f"Using {str(len(triggers))} triggers.")
         iteration_states = {}
         old_infections = 1.0
         old_infection_n = 1.0
-        print("iteration, infected, new_infections, k")
+        print("iteration, infected, new_infections, k", "normal", "recovered")
         for i in range(config.iterations):
             world.iteration = i
             world.act()
             iteration_states[i] = world.simplify()
-            new_infections = world.infected - old_infection_n + 0.0000001
+            normal, recovered, infected = world.status
+            new_infections = infected - old_infection_n
             vs.set("iteration", i)
-            vs.set("infected", world.infected)
+            vs.set("infected", infected)
             vs.set("new_infections", new_infections)
-            vs.set("k", float(new_infections) / old_infections)
+            try:
+                vs.set("k", round(float(new_infections / old_infections), 3))
+            except ArithmeticError:
+                vs.set("k", 0)
+            vs.set("normal", normal)
+            vs.set("recovered", recovered)
             vs.print_variables()
-            old_infection_n = world.infected
+            old_infection_n = infected
             old_infections = new_infections
             for t in triggers:
                 if t.test(world):
                     t.act(world)
                     triggers.pop(triggers.index(t))
+        world.iteration += 1
     except KeyboardInterrupt:
-        print("okay you impatient thingy")
+        print("\nokay you impatient thingy\n")
     except Exception as e:
         print(str(e))
         raise e
@@ -46,7 +55,7 @@ def main(config: Config = None):
             f.write(pickle.dumps(iteration_states))
         history = vs.get_history()
         vs.history_to_csv("stats.csv")
-        t = list(range(config.iterations + 1))
+        t = list(range(world.iteration + 1))
         smooth_news = [moving_average(history["new_infections"], 5)[i] for i in range(
             29)] + moving_average(history["new_infections"], 30)  # first 30 iterations cannot be calculated
 
@@ -55,20 +64,25 @@ def main(config: Config = None):
         color = "tab:red"
 
         ax1.set_xlabel("iterations (days)")
-        ax1.set_ylabel("total infections", color=color)
+        ax1.set_ylabel("# of cases")
         try:
-            ax1.plot(t, history["infected"], color=color)
+            ax1.plot(t, history["infected"], color=color, label="infected")
+            ax1.plot(t, history["normal"], color="blue", label="normal")
+            ax1.plot(t, history["recovered"], color="green", label="recovered")
         except ValueError as e:
             print("*"*50)
             print(e)
             print("*"*50)
             ax1.plot(history["infected"], color=color)
+        ax1.set_title("Absolute cases")
+        ax1.legend()
         ax1.tick_params(axis="y", color=color)
 
-        ax2 = ax1.twinx()
+        fig2, ax2 = plt.subplots()
 
         color = "tab:blue"
-        ax2.set_ylabel("new infections", color=color)
+        ax2.set_ylabel("new infections")
+        ax2.set_xlabel("iterations (days)")
         try:
             ax2.plot(t, smooth_news, color=color)
         except ValueError as e:
@@ -76,23 +90,32 @@ def main(config: Config = None):
             print(e)
             print("*"*50)
             ax2.plot(smooth_news, color=color)
+        ax2.set_title("New infections")
 
         fig.tight_layout()
-        plt.title("Epidemic Simulator!")
         plt.show()
 
 
 class Trigger:
-    def __init__(self, iteration: int = None, infected: int = None):
+    def __init__(self, iteration: int = None, normal: int = None, recovered: int = None, infected: int = None):
         self.iteration = iteration
+        self.normal = normal
+        self.recovered = recovered
         self.infected = infected
 
     def test(self, world: World):
+        normal, recovered, infected = world.status
         if self.iteration != None:
             if world.iteration >= self.iteration:
                 return True
+        if self.normal != None:
+            if normal <= self.normal:
+                return True
+        if self.recovered != None:
+            if recovered >= self.recovered:
+                return True
         if self.infected != None:
-            if world.infected >= self.infected:
+            if infected >= self.infected:
                 return True
         return False
 

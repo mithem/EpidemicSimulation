@@ -4,7 +4,7 @@ from episim.utils import coordinate_distance, get_neighbor_coords
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.iterations = iterations
@@ -14,15 +14,18 @@ class Config:
         self.coordinate_system_length = math.floor(math.sqrt(self.capacity))
         self.verbose = verbose
         self.random_infection = random_infection
+        self.days_infected = days_infected
+        self.resistance = resistance
 
     def __str__(self):
-        return f"Capacity: {self.capacity}\nInitial Infections: {self.initial_infections}\nIterations: {self.iterations}\nInfection Distance: {self.infection_distance}\nInfection chance: {self.infection_chance}\nRandom infection (initially): {str(self.random_infection)}"
+        return f"Capacity: {self.capacity}\nInitial Infections: {self.initial_infections}\nIterations: {self.iterations}\nInfection Distance: {self.infection_distance}\nInfection chance: {self.infection_chance}\nRandom infection (initially): {str(self.random_infection)}\nResistance: {str(self.resistance)}"
 
 
 class Person:
     def __init__(self, infected=False, recovered=False):
         self._infected = infected
         self._recovered = recovered
+        self._days_infected = 0
 
     @property
     def infected(self):
@@ -53,6 +56,12 @@ class Person:
         else:
             return "normal"
 
+    def act(self, max_days_infected):
+        if self._days_infected == max_days_infected:
+            self.recovered = True
+        if self.infected:
+            self._days_infected += 1
+
     def __str__(self):
         return self.status
 
@@ -78,7 +87,7 @@ class World:
             i = 0
             x = 0
             y = 0
-            while i < infected:
+            while i < config.initial_infections:
                 self.coordinates[(x, y)].infected = True
                 i += 1
                 x += 1
@@ -87,12 +96,20 @@ class World:
                     x = 0
 
     @property
-    def infected(self):
+    def status(self):
+        """return normal, recovered, infected"""
+        n = 0
+        r = 0
         i = 0
         for p in self.coordinates.values():
-            if p.infected:
+            s = p.status
+            if s == "normal":
+                n += 1
+            elif s == "recovered":
+                r += 1
+            elif s == "infected":
                 i += 1
-        return i
+        return n, r, i
 
     def act(self):
         for coord, person in self.coordinates.items():
@@ -100,8 +117,14 @@ class World:
                 coord, self.config.infection_distance + 1, self.config.coordinate_system_length - 1)
             for nc in neighbors:
                 if (coordinate_distance(coord, nc) <= self.config.infection_distance and (person.infected or self.coordinates[nc].infected) and random_module.random() < self.config.infection_chance) or random_module.random() < self.config.random_movement * 0.0001:
-                    person.infected = True
-                    self.coordinates[nc].infected = True
+                    if person.recovered:
+                        if random_module.random() < self.config.resistance:
+                            person.infected = True
+                            self.coordinates[nc].infected = True
+                    else:
+                        person.infected = True
+                        self.coordinates[nc].infected = True
+            person.act(self.config.days_infected)
 
     def simplify(self):
         result = {}
