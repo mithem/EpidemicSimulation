@@ -8,7 +8,7 @@ class MyTrig(episim.Trigger):
 
 class AnotherTrig(episim.Trigger):
     def act(self, world: episim.World):
-        world.config.infection_chance = 0.02
+        world.config.infection_chance = 0.015
 
 
-triggers = [MyTrig(infected=100), AnotherTrig(100)]
+triggers = [MyTrig(infected=20), AnotherTrig(100), MyTrig(infected=500)]
