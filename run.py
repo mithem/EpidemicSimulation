@@ -20,6 +20,8 @@ p.add_argument("--resistance", "-r", type=float, default=0.95,
                help="Probability that recovered persons are resistant against another infections")
 p.add_argument("--trigger", "-t", action="store_true",
                help="try to import the module 'triggers' where you can specify your own triggers")
+p.add_argument("--sleep-time", "-st", type=int, default=0.0,
+               help="Sleep by this after every iteration")
 args = p.parse_args()
 
 nri = args.no_random_infection

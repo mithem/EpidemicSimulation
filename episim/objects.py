@@ -1,10 +1,11 @@
 import math
 import random as random_module
 from episim.utils import coordinate_distance, get_neighbor_coords
+from time import sleep
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.iterations = iterations
@@ -16,6 +17,7 @@ class Config:
         self.random_infection = random_infection
         self.days_infected = days_infected
         self.resistance = resistance
+        self.sleep_time = sleep_time
 
     def __str__(self):
         return f"Capacity: {self.capacity}\nInitial Infections: {self.initial_infections}\nIterations: {self.iterations}\nInfection Distance: {self.infection_distance}\nInfection chance: {self.infection_chance}\nRandom infection (initially): {str(self.random_infection)}\nResistance: {str(self.resistance)}"
@@ -26,6 +28,7 @@ class Person:
         self._infected = infected
         self._recovered = recovered
         self._days_infected = 0
+        self.r0 = 0
 
     @property
     def infected(self):
@@ -34,6 +37,10 @@ class Person:
     @property
     def recovered(self):
         return self._recovered
+
+    @property
+    def normal(self):
+        return self._days_infected == 0 and not self.recovered and not self.infected
 
     @infected.setter
     def infected(self, infected: bool):
@@ -71,6 +78,7 @@ class World:
         """if `random`, random persons will be chosen to be infected from the start. Otherwise, they will spawn in the top left corner. `Random`might choose the same coordinates/person multiple times."""
         self.config = config
         self.iteration = 0
+        self.r0 = 0
         self.coordinates: dict[tuple, Person] = {}
         for x in range(self.config.coordinate_system_length):
             for y in range(self.config.coordinate_system_length):
@@ -97,7 +105,7 @@ class World:
 
     @property
     def status(self):
-        """return normal, recovered, infected"""
+        """return normal, recovered, infected, R0"""
         n = 0
         r = 0
         i = 0
@@ -109,22 +117,35 @@ class World:
                 r += 1
             elif s == "infected":
                 i += 1
-        return n, r, i
+        return n, r, i, self.r0
 
     def act(self):
+        r0 = 0
         for coord, person in self.coordinates.items():
-            neighbors = get_neighbor_coords(
-                coord, self.config.infection_distance + 1, self.config.coordinate_system_length - 1)
-            for nc in neighbors:
-                if (coordinate_distance(coord, nc) <= self.config.infection_distance and (person.infected or self.coordinates[nc].infected) and random_module.random() < self.config.infection_chance) or random_module.random() < self.config.random_movement * 0.0001:
-                    if person.recovered:
-                        if random_module.random() < self.config.resistance:
-                            person.infected = True
-                            self.coordinates[nc].infected = True
-                    else:
-                        person.infected = True
-                        self.coordinates[nc].infected = True
+            if person.infected:
+                neighbors = get_neighbor_coords(
+                    coord, self.config.infection_distance + 1 + random_module.random() * self.config.random_movement, self.config.coordinate_system_length - 1)
+                for nc in neighbors:
+                    if coordinate_distance(coord, nc) <= self.config.infection_distance:
+                        if random_module.random() < self.config.infection_chance:
+                            self.infect(nc)
+                            person.r0 += 1
+                r0 += person.r0
             person.act(self.config.days_infected)
+        try:
+            r0 /= self.status[2]  # n of infected
+        except ArithmeticError:
+            r0 = 0
+        self.r0 = r0
+        sleep(self.config.sleep_time)
+
+    def infect(self, coord):
+        p = self.coordinates[coord]
+        if p.recovered:
+            if random_module.random() >= self.config.resistance:
+                p.infected = True
+        elif p.normal:
+            p.infected = True
 
     def simplify(self):
         result = {}
