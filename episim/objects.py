@@ -5,9 +5,10 @@ from time import sleep
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
+        self.start_iteration = start_iteration
         self.iterations = iterations
         self.infection_distance = infection_distance
         self.infection_chance = infection_chance
@@ -159,3 +160,7 @@ class World:
             s += str(coordinate) + ": " + str(person) + ",\n"
         s += "}"
         return s
+
+
+class SimulationEvent(Exception):
+    pass
