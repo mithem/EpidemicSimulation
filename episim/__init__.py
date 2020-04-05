@@ -7,7 +7,7 @@ import numpy as np
 from fileloghelper import VarSet
 
 from episim.objects import *
-from episim.utils import coordinate_distance, moving_average
+from episim.utils import coordinate_distance, moving_average, terminal_size
 
 
 def main(config: Config = None, world: World = None, vs: VarSet = None, iteration_states: dict = {}, old_infection_n=0, old_infections=0):
@@ -19,13 +19,18 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
         world = World(config)
     if vs == None:
         vs = VarSet({"iteration": 0, "infected": config.initial_infections,
-                     "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0, "r0": 0})
+                     "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0, "r0": 0, "infection_chance": config.infection_chance, "infection_distance": config.infection_distance})
+    try:
+        import tabulate
+        use_tabulate = True
+    except ImportError:
+        use_tabulate = False
     try:
         if config.verbose:
             print(f"Using {str(len(triggers))} triggers.")
         old_infections = 1.0
         old_infection_n = 1.0
-        print("iteration, infected, new_infections, k, normal, recovered, r0")
+        vs.print_head()
         for i in range(config.start_iteration, config.iterations):
             world.iteration = i
             world.act()
@@ -42,7 +47,17 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
             vs.set("normal", normal)
             vs.set("recovered", recovered)
             vs.set("r0", r0)
-            vs.print_variables()
+            vs.set("infection_chance", world.config.infection_chance)
+            vs.set("infection_distance", world.config.infection_distance)
+            if config.use_tabulate and use_tabulate:
+                val = vs.variables.copy()
+                for key, value in val.items():
+                    val[key] = [value]
+                table = tabulate.tabulate(val, headers="keys")
+                print("\n"*terminal_size()[1], end="")
+                print(table, flush=True)
+            else:
+                vs.print_variables()
             old_infection_n = infected
             old_infections = new_infections
             for t in triggers:
@@ -124,7 +139,31 @@ def evalutation(vs: VarSet, world, iteration_states):
     ax3.set_ylabel("R0", color="orange")
     ax2.set_title("New infections, R0")
 
+    fig3, ax4 = plt.subplots()
+
+    ax4.set_ylabel("infection chance", color="blue")
+    ax4.set_xlabel("iteration (days)")
+    ax5 = ax4.twinx()
+    ax5.set_ylabel("infection distance", color="orange")
+    ax4.set_title("Infection chance/distance")
+
+    try:
+        ax4.plot(t, history["infection_chance"],
+                 color="blue", label="infection chance")
+        ax5.plot(t, history["infection_distance"],
+                 color="orange", label="infection distance")
+    except ValueError as e:
+        print("*"*50)
+        print(e)
+        print("*"*50)
+        ax4.plot(history["infection_chance"],
+                 color="blue", label="infection chance")
+        ax5.plot(history["infection_distance"],
+                 color="orange", label="infection distance")
+
     fig.tight_layout()
+    fig2.tight_layout()
+    fig3.tight_layout()
     plt.show()
 
 

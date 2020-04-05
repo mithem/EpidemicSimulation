@@ -1,4 +1,8 @@
+import fcntl
 import math
+import struct
+import termios
+
 import numpy
 
 
@@ -25,3 +29,10 @@ def get_neighbor_coords(c: tuple, d: int, boundary_length: int):
 def moving_average(x, N):
     cumsum = numpy.cumsum(numpy.insert(x, 0, 0))
     return list((cumsum[N:] - cumsum[:-N]) / float(N))
+
+
+def terminal_size():
+    th, tw, hp, wp = struct.unpack('HHHH',
+                                   fcntl.ioctl(0, termios.TIOCGWINSZ,
+                                               struct.pack('HHHH', 0, 0, 0, 0)))
+    return tw, th

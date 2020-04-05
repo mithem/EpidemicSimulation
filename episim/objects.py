@@ -2,10 +2,12 @@ import math
 import random as random_module
 from episim.utils import coordinate_distance, get_neighbor_coords
 from time import sleep
+import warnings
+import numpy as np
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, r0=0.0, use_tabulate=True, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.start_iteration = start_iteration
@@ -19,6 +21,12 @@ class Config:
         self.days_infected = days_infected
         self.resistance = resistance
         self.sleep_time = sleep_time
+        self.r0 = r0
+        self.use_tabulate = use_tabulate
+
+        if r0 != 0.0 and infection_chance != 0.01:
+            warnings.warn(
+                "R0 and infection_chance (ic) are both specified, ic will be ignored.")
 
     def __str__(self):
         return f"Capacity: {self.capacity}\nInitial Infections: {self.initial_infections}\nIterations: {self.iterations}\nInfection Distance: {self.infection_distance}\nInfection chance: {self.infection_chance}\nRandom infection (initially): {str(self.random_infection)}\nResistance: {str(self.resistance)}"
@@ -137,6 +145,11 @@ class World:
             r0 /= self.status[2]  # n of infected
         except ArithmeticError:
             r0 = 0
+        if self.config.r0 != 0.0:
+            prev_r0 = self.r0
+            average_r0 = np.average([prev_r0, r0])
+            self.config.infection_chance += 0.00025 * \
+                (self.config.r0 - average_r0)
         self.r0 = r0
         sleep(self.config.sleep_time)
 
