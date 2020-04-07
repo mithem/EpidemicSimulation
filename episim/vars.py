@@ -1,0 +1,2 @@
+triggers = []
+person_types = []

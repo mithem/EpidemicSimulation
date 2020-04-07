@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from fileloghelper import VarSet
 
-from episim.objects import *
+from episim.objects import Config, World, Person, Trigger, SimulationEvent
 from episim.utils import coordinate_distance, moving_average, terminal_size
+from episim.vars import person_types, triggers
 
 
 def main(config: Config = None, world: World = None, vs: VarSet = None, iteration_states: dict = {}, old_infection_n=0, old_infections=0):
@@ -54,8 +55,10 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
                 for key, value in val.items():
                     val[key] = [value]
                 table = tabulate.tabulate(val, headers="keys")
-                print("\n"*terminal_size()[1], end="")
-                print(table, flush=True)
+                text = str(config) + "\n\n" + table
+                print("\n"*int(terminal_size()
+                               [1] - text.count("\n") - 1), end="")
+                print(text, flush=True)
             else:
                 vs.print_variables()
             old_infection_n = infected
@@ -72,11 +75,11 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
             f"\n\nFinished simulation! ({str(world.iteration)} iterations)\n")
     except KeyboardInterrupt:
         print("\nokay you impatient thingy\n")
+    except SimulationEvent as e:
+        print(str(e))
     except Exception as e:
         print(str(e))
         raise e
-    except SimulationEvent as e:
-        print(str(e))
     finally:
         evalutation(vs, world, iteration_states)
         if input("continue/exit [c/e]?> ").lower() == "c":
@@ -165,37 +168,3 @@ def evalutation(vs: VarSet, world, iteration_states):
     fig2.tight_layout()
     fig3.tight_layout()
     plt.show()
-
-
-class Trigger:
-    def __init__(self, iteration: int = None, normal: int = None, recovered: int = None, infected: int = None):
-        self.iteration = iteration
-        self.normal = normal
-        self.recovered = recovered
-        self.infected = infected
-
-    def test(self, world: World):
-        normal, recovered, infected, r0 = world.status
-        if self.iteration != None:
-            if world.iteration >= self.iteration:
-                return True
-        if self.normal != None:
-            if normal <= self.normal:
-                return True
-        if self.recovered != None:
-            if recovered >= self.recovered:
-                return True
-        if self.infected != None:
-            if infected >= self.infected:
-                return True
-        return False
-
-    def register(self):
-        triggers.append(self)
-
-    def act(self, world):
-        """Override this method to get access to the world and manipulate its config parameters."""
-        pass
-
-
-triggers = []

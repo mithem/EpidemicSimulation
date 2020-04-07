@@ -34,3 +34,28 @@ def test_get_neighbor_coords_2():
     for i in expected:
         assert i in result
     assert len(result) == len(expected)
+
+
+def test_sort_by_class_name():
+    class A:
+        a = 0
+
+    class B:
+        b = 1
+
+    class C:
+        c = 2
+    result = sort_by_class_name([B, A, C])
+    assert result[0] == A
+    assert result[1] == B
+    assert result[2] == C
+
+
+def test_fill_person_types_to():
+    result = fill_person_types_to(["A", "B"], [75, 25], 4, sort=False)
+    print(result)
+    assert len(result) == 4
+    assert result[0] == "A"
+    assert result[1] == "A"
+    assert result[2] == "A"
+    assert result[3] == "B"
