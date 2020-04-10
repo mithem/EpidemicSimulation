@@ -12,7 +12,7 @@ from episim.vars import person_types, triggers
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=1, infection_chance=0.01, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, r0=0.0, use_tabulate=True, person_types_amount: Union[str, list] = [100], verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=2, infection_chance=0.04, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, r0=0.0, use_tabulate=True, person_types_amount: Union[str, list] = [100], resistant_days=500, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.start_iteration = start_iteration
@@ -28,6 +28,7 @@ class Config:
         self.sleep_time = sleep_time
         self.r0 = r0
         self.use_tabulate = use_tabulate
+        self.resistant_days = resistant_days
         self.person_types_amount = get_person_types_amount(person_types_amount)
 
         if r0 != 0.0 and infection_chance != 0.01:
@@ -46,6 +47,14 @@ Sleep time: {str(self.sleep_time)}
 (Force) R0: {str(self.r0)}
 Triggers: {str(len(triggers))}
 """
+    @property
+    def full_string(self):
+        s = str(self).lower()
+        result = ""
+        for att in dir(self):
+            if not callable(att) and not att[0:4].lower() in s and not att == "full_string" and not att[0:2] == "__":
+                result += att + ": " + str(getattr(self, att)) + "\n"
+        return s + result
 
 
 class Person:
@@ -53,11 +62,13 @@ class Person:
         self._infected = infected
         self._recovered = recovered
         self._days_infected = 0
+        self._days_recovered = 0
         self.r0 = 0
         self.infection_chance = None
         self.infection_distance = None
         self.random_movement = None
         self.days_infected = None
+        self.resistant_days = None
 
     @property
     def infected(self):
@@ -69,7 +80,7 @@ class Person:
 
     @property
     def normal(self):
-        return self._days_infected == 0 and not self.recovered and not self.infected
+        return not self.recovered and not self.infected
 
     @infected.setter
     def infected(self, infected: bool):
@@ -92,13 +103,21 @@ class Person:
         else:
             return "normal"
 
-    def act(self, max_days_infected):
+    def act(self, max_days_infected, resistant_days):
         if self.days_infected != None:
             max_days_infected = self.days_infected
         if self._days_infected == max_days_infected:
             self.recovered = True
         if self.infected:
             self._days_infected += 1
+        if self.recovered:
+            self._days_recovered += 1
+            if self.resistant_days != None:
+                resistant_days = self.resistant_days
+            if resistant_days == self._days_recovered:
+                self._days_recovered = 0
+                self._days_infected = 0
+                self.infected = True
 
     def register(self):
         person_types.append(self.__class__)
@@ -175,7 +194,7 @@ class World:
                             self.infect(nc)
                             person.r0 += 1
                 r0 += person.r0
-            person.act(self.config.days_infected)
+            person.act(self.config.days_infected, self.config.resistant_days)
         try:
             r0 /= self.status[2]  # n of infected
         except ArithmeticError:

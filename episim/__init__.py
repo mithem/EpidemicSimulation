@@ -20,7 +20,7 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
         world = World(config)
     if vs == None:
         vs = VarSet({"iteration": 0, "infected": config.initial_infections,
-                     "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0, "r0": 0, "infection_chance": config.infection_chance, "infection_distance": config.infection_distance})
+                     "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0, "r0": 0, "infection_chance": config.infection_chance, "infection_distance": config.infection_distance, "resistant_days": config.resistant_days})
     try:
         import tabulate
         use_tabulate = True
@@ -50,12 +50,17 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
             vs.set("r0", r0)
             vs.set("infection_chance", world.config.infection_chance)
             vs.set("infection_distance", world.config.infection_distance)
+            vs.set("resistant_days", world.config.resistant_days)
             if config.use_tabulate and use_tabulate:
                 val = vs.variables.copy()
                 for key, value in val.items():
                     val[key] = [value]
                 table = tabulate.tabulate(val, headers="keys")
-                text = str(config) + "\n\n" + table
+                if config.verbose:
+                    text = config.full_string
+                else:
+                    text = str(config)
+                text += "\n\n" + table
                 print("\n"*int(terminal_size()
                                [1] - text.count("\n") - 1), end="")
                 print(text, flush=True)
