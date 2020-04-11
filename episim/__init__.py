@@ -19,8 +19,8 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
     if world == None:
         world = World(config)
     if vs == None:
-        vs = VarSet({"iteration": 0, "infected": config.initial_infections,
-                     "new_infections": 0, "k": 0, "normal": config.capacity - config.initial_infections, "recovered": 0, "r0": 0, "infection_chance": config.infection_chance, "infection_distance": config.infection_distance, "resistant_days": config.resistant_days})
+        vs = VarSet({"iteration": 0, "infected": config.initial_infections, "normal": config.capacity - config.initial_infections, "recovered": 0,
+                     "infection_chance": config.infection_chance, "infection_distance": config.infection_distance, "resistant_days": config.resistant_days, "r0": 0, "new_infections": 0, })
     try:
         import tabulate
         use_tabulate = True
@@ -29,7 +29,6 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
     try:
         if config.verbose:
             print(f"Using {str(len(triggers))} triggers.")
-        old_infections = 1.0
         old_infection_n = 1.0
         vs.print_head()
         for i in range(config.start_iteration, config.iterations):
@@ -41,10 +40,6 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
             vs.set("iteration", list(iteration_states.keys())[-1])
             vs.set("infected", infected)
             vs.set("new_infections", new_infections)
-            try:
-                vs.set("k", round(float(new_infections / old_infections), 3))
-            except ArithmeticError:
-                vs.set("k", 0)
             vs.set("normal", normal)
             vs.set("recovered", recovered)
             vs.set("r0", r0)
@@ -67,11 +62,11 @@ def main(config: Config = None, world: World = None, vs: VarSet = None, iteratio
             else:
                 vs.print_variables()
             old_infection_n = infected
-            old_infections = new_infections
             for t in triggers:
                 if t.test(world):
                     t.act(world)
-                    triggers.pop(triggers.index(t))
+                    if not t.continous:
+                        triggers.pop(triggers.index(t))
             if infected == 0:
                 raise SimulationEvent(
                     "\nNo infected people. Epidemic is over!\n")

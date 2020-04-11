@@ -85,3 +85,14 @@ def fill_person_types_to(person_types: list, value: list, total_length: int):
         for counter in range(fill_value):
             result.append(pt)
     return result
+
+
+def get_percent_of_world(value: Union[int, str], capacity):
+    try:
+        return int(value)
+    except ValueError:
+        if type(value) == str:
+            if value[-1] == "%":
+                return int(round(int(value[:-1]) * 0.01 * capacity, 0))
+            else:
+                raise ValueError("Unable to parse int")

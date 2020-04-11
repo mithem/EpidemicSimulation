@@ -52,10 +52,19 @@ def test_sort_by_class_name():
 
 
 def test_fill_person_types_to():
-    result = fill_person_types_to(["A", "B"], [75, 25], 4, sort=False)
+    result = fill_person_types_to(["A", "B"], [75, 25], 4)
     print(result)
     assert len(result) == 4
     assert result[0] == "A"
     assert result[1] == "A"
     assert result[2] == "A"
     assert result[3] == "B"
+
+
+def test_get_percent_of_world():
+    assert get_percent_of_world(100, 10000) == 100
+    assert get_percent_of_world("10%", 10000) == 1000
+    assert get_percent_of_world("99%", 100) == 99
+    assert get_percent_of_world("99%", 10) == 10
+    assert get_percent_of_world("50%", 1) == 0
+    assert get_percent_of_world("51%", 1) == 1

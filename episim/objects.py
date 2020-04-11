@@ -12,7 +12,7 @@ from episim.vars import person_types, triggers
 
 
 class Config:
-    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=2, infection_chance=0.04, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, r0=0.0, use_tabulate=True, person_types_amount: Union[str, list] = [100], resistant_days=500, verbose=True):
+    def __init__(self, capacity=10000, initial_infections=5, start_iteration=0, iterations=1000, infection_distance=2, infection_chance=0.025, random_movement=0.01, random_infection=True, days_infected=10, resistance=0.95, sleep_time=0.0, r0=0.0, use_tabulate=True, person_types_amount: Union[str, list] = [100], resistant_days=500, verbose=True):
         self.capacity = capacity
         self.initial_infections = initial_infections
         self.start_iteration = start_iteration
@@ -230,25 +230,37 @@ class World:
 
 
 class Trigger:
-    def __init__(self, iteration: int = None, normal: int = None, recovered: int = None, infected: int = None):
+    """Subclass this class to create own triggers for advanced customization.
+    (Important) Methods
+    ---
+    - test(self, world: episim.World) -> bool # is this trigger triggered yet? If this returns True, it's `act` method will be called. Not meant to be overridden.
+    - act(self, world: episim.World) # override this to customize the world to your liking while the simulation is running
+    """
+
+    def __init__(self, iteration: int = None, r0: int = None, normal: Union[int, str] = None, recovered: Union[int, str] = None, infected: Union[int, str] = None, continous=False):
         self.iteration = iteration
         self.normal = normal
         self.recovered = recovered
         self.infected = infected
+        self.r0 = r0
+        self.continous = continous
 
     def test(self, world: World):
         normal, recovered, infected, r0 = world.status
         if self.iteration != None:
-            if world.iteration >= self.iteration:
+            if world.iteration >= get_percent_of_world(self.iteration, world.config.capacity):
                 return True
         if self.normal != None:
-            if normal <= self.normal:
+            if normal <= get_percent_of_world(self.normal, world.config.capacity):
                 return True
         if self.recovered != None:
-            if recovered >= self.recovered:
+            if recovered >= get_percent_of_world(self.recovered, world.config.capacity):
                 return True
         if self.infected != None:
-            if infected >= self.infected:
+            if infected >= get_percent_of_world(self.infected, world.config.capacity):
+                return True
+        if self.r0 != None:
+            if self.r0 <= r0:
                 return True
         return False
 
